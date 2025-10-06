@@ -1181,11 +1181,15 @@
         // AGENDA
         // =============================================
         async function loadAgenda() {
-            const citas = await readSheet('Citas');
-            const usuarios = await readSheet('Usuarios');
+            const [citas, usuarios, horarios] = await Promise.all([
+                readSheet('Citas'),
+                readSheet('Usuarios'),
+                readSheet('Horarios')
+            ]);
             
             dataCache.citas = citas;
             dataCache.usuarios = usuarios;
+            dataCache.horarios = horarios;
             
             renderCalendar();
         }
@@ -1221,6 +1225,31 @@
                         fecha.setDate(fecha.getDate() + dia);
                         const fechaStr = fecha.toISOString().split('T')[0];
                         
+                        // Verificar disponibilidad de profesionales en este horario
+                        let hayProfesionalDisponible = false;
+                        
+                        if (profesionalFilter) {
+                            // Si hay filtro, verificar solo ese profesional
+                            const usuario = dataCache.usuarios.find(u => u[1] === profesionalFilter);
+                            if (usuario) {
+                                const horarioProfesional = dataCache.horarios.find(h => h[0] === usuario[0]);
+                                hayProfesionalDisponible = verificarDisponibilidad(horarioProfesional, dia, timeStr);
+                            }
+                        } else {
+                            // Sin filtro, verificar si hay AL MENOS UN profesional disponible
+                            const profesionales = dataCache.usuarios.filter(u => 
+                                u[4] === 'Fisioterapeuta' || u[4] === 'Entrenador'
+                            );
+                            
+                            for (const prof of profesionales) {
+                                const horarioProfesional = dataCache.horarios.find(h => h[0] === prof[0]);
+                                if (verificarDisponibilidad(horarioProfesional, dia, timeStr)) {
+                                    hayProfesionalDisponible = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
                         // Buscar citas para este slot
                         const citasSlot = dataCache.citas.filter(c => 
                             c[1] === fechaStr && 
@@ -1242,14 +1271,48 @@
                             }).join('');
                         }
                         
-                        html += `<div class="time-slot" onclick="nuevaCitaRapida('${fechaStr}', '${timeStr}')">
+                        // Aplicar estilo según disponibilidad
+                        const slotStyle = !hayProfesionalDisponible ? 
+                            'style="background:#f5f5f5; cursor:not-allowed;"' : '';
+                        
+                        const onclickAction = hayProfesionalDisponible ? 
+                            `onclick="nuevaCitaRapida('${fechaStr}', '${timeStr}')"` : 
+                            `onclick="alert('No hay profesionales disponibles en este horario')"`;
+                        
+                        html += `<div class="time-slot" ${slotStyle} ${onclickAction}>
                             ${slotContent}
+                            ${!hayProfesionalDisponible && !slotContent ? 
+                                '<span style="color:#ccc; font-size:10px;">No disponible</span>' : ''}
                         </div>`;
                     }
                 }
             }
             
             grid.innerHTML = html;
+        }
+        
+        // Función auxiliar para verificar disponibilidad
+        function verificarDisponibilidad(horarioProfesional, diaIndex, timeStr) {
+            if (!horarioProfesional || !horarioProfesional[diaIndex + 1]) return false;
+            
+            const [rangoManana, rangoTarde] = horarioProfesional[diaIndex + 1].split(',');
+            const horaNum = parseInt(timeStr.replace(':', ''));
+            
+            if (rangoManana && rangoManana.includes('-')) {
+                const [inicioM, finM] = rangoManana.split('-');
+                const inicioManana = parseInt(inicioM.replace(':', ''));
+                const finManana = parseInt(finM.replace(':', ''));
+                if (horaNum >= inicioManana && horaNum < finManana) return true;
+            }
+            
+            if (rangoTarde && rangoTarde.includes('-')) {
+                const [inicioT, finT] = rangoTarde.split('-');
+                const inicioTarde = parseInt(inicioT.replace(':', ''));
+                const finTarde = parseInt(finT.replace(':', ''));
+                if (horaNum >= inicioTarde && horaNum < finTarde) return true;
+            }
+            
+            return false;
         }
 
         function getWeekStart(date) {
@@ -1289,6 +1352,7 @@
         }
 
         function nuevaCitaRapida(fecha, hora) {
+            // Pre-cargar datos y luego abrir modal con fecha y hora
             nuevaCita(fecha, hora);
         }
 
@@ -1533,6 +1597,42 @@
             await loadPacientes();
             const usuarios = await readSheet('Usuarios');
             const actos = await readSheet('Actos');
+            const horarios = await readSheet('Horarios');
+            dataCache.horarios = horarios;
+            
+            // Filtrar profesionales disponibles en esa fecha y hora si se especifican
+            let profesionalesDisponibles = usuarios.filter(u => u[4] === 'Fisioterapeuta' || u[4] === 'Entrenador');
+            
+            if (fecha && hora) {
+                const diaSemana = new Date(fecha).getDay();
+                const diaIndex = diaSemana === 0 ? 6 : diaSemana - 1; // Convertir domingo de 0 a 6
+                
+                profesionalesDisponibles = profesionalesDisponibles.filter(prof => {
+                    const horarioProfesional = horarios.find(h => h[0] === prof[0]);
+                    if (!horarioProfesional || !horarioProfesional[diaIndex + 1]) return false;
+                    
+                    const [rangoManana, rangoTarde] = horarioProfesional[diaIndex + 1].split(',');
+                    
+                    // Verificar si la hora está en alguno de los rangos
+                    const horaNum = parseInt(hora.replace(':', ''));
+                    
+                    if (rangoManana) {
+                        const [inicioM, finM] = rangoManana.split('-');
+                        const inicioManana = parseInt(inicioM.replace(':', ''));
+                        const finManana = parseInt(finM.replace(':', ''));
+                        if (horaNum >= inicioManana && horaNum < finManana) return true;
+                    }
+                    
+                    if (rangoTarde) {
+                        const [inicioT, finT] = rangoTarde.split('-');
+                        const inicioTarde = parseInt(inicioT.replace(':', ''));
+                        const finTarde = parseInt(finT.replace(':', ''));
+                        if (horaNum >= inicioTarde && horaNum < finTarde) return true;
+                    }
+                    
+                    return false;
+                });
+            }
             
             const html = `
                 <form id="formCita" onsubmit="guardarCita(event)">
@@ -1540,11 +1640,13 @@
                         <div class="form-group">
                             <label>Fecha *</label>
                             <input type="date" class="form-control" name="fecha" required 
-                                   value="${fecha || new Date().toISOString().split('T')[0]}">
+                                   value="${fecha || new Date().toISOString().split('T')[0]}"
+                                   onchange="actualizarProfesionalesDisponibles(this.value, document.querySelector('[name=hora]').value)">
                         </div>
                         <div class="form-group">
                             <label>Hora *</label>
-                            <input type="time" class="form-control" name="hora" required value="${hora || '10:00'}">
+                            <input type="time" class="form-control" name="hora" required value="${hora || '10:00'}"
+                                   onchange="actualizarProfesionalesDisponibles(document.querySelector('[name=fecha]').value, this.value)">
                         </div>
                     </div>
                     
@@ -1559,11 +1661,13 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>Profesional *</label>
-                        <select class="form-control" name="profesionalId" required>
+                        <label>Profesional * ${fecha && hora && profesionalesDisponibles.length === 0 ? 
+                            '<span style="color: red;">(No hay profesionales disponibles en este horario)</span>' : ''}</label>
+                        <select class="form-control" name="profesionalId" id="selectProfesionalCita" required>
                             <option value="">Seleccionar...</option>
-                            ${usuarios.filter(u => u[4] === 'Fisioterapeuta' || u[4] === 'Entrenador')
-                                .map(u => `<option value="${u[0]}">${u[1]}</option>`).join('')}
+                            ${profesionalesDisponibles.map(u => 
+                                `<option value="${u[0]}">${u[1]} - ${u[4]}</option>`
+                            ).join('')}
                         </select>
                     </div>
                     
@@ -1603,6 +1707,63 @@
             `;
             
             openModal('Nueva Cita', html);
+        }
+        
+        // Función para actualizar profesionales disponibles cuando cambie fecha/hora
+        async function actualizarProfesionalesDisponibles(fecha, hora) {
+            if (!fecha || !hora) return;
+            
+            const usuarios = await readSheet('Usuarios');
+            const horarios = await readSheet('Horarios');
+            
+            const diaSemana = new Date(fecha).getDay();
+            const diaIndex = diaSemana === 0 ? 6 : diaSemana - 1;
+            
+            let profesionalesDisponibles = usuarios.filter(u => u[4] === 'Fisioterapeuta' || u[4] === 'Entrenador');
+            
+            profesionalesDisponibles = profesionalesDisponibles.filter(prof => {
+                const horarioProfesional = horarios.find(h => h[0] === prof[0]);
+                if (!horarioProfesional || !horarioProfesional[diaIndex + 1]) return false;
+                
+                const [rangoManana, rangoTarde] = horarioProfesional[diaIndex + 1].split(',');
+                
+                const horaNum = parseInt(hora.replace(':', ''));
+                
+                if (rangoManana && rangoManana.includes('-')) {
+                    const [inicioM, finM] = rangoManana.split('-');
+                    const inicioManana = parseInt(inicioM.replace(':', ''));
+                    const finManana = parseInt(finM.replace(':', ''));
+                    if (horaNum >= inicioManana && horaNum < finManana) return true;
+                }
+                
+                if (rangoTarde && rangoTarde.includes('-')) {
+                    const [inicioT, finT] = rangoTarde.split('-');
+                    const inicioTarde = parseInt(inicioT.replace(':', ''));
+                    const finTarde = parseInt(finT.replace(':', ''));
+                    if (horaNum >= inicioTarde && horaNum < finTarde) return true;
+                }
+                
+                return false;
+            });
+            
+            // Actualizar el select de profesionales
+            const select = document.getElementById('selectProfesionalCita');
+            if (select) {
+                select.innerHTML = '<option value="">Seleccionar...</option>' +
+                    profesionalesDisponibles.map(u => 
+                        `<option value="${u[0]}">${u[1]} - ${u[4]}</option>`
+                    ).join('');
+                    
+                // Actualizar label si no hay profesionales
+                const label = select.previousElementSibling;
+                if (label) {
+                    if (profesionalesDisponibles.length === 0) {
+                        label.innerHTML = 'Profesional * <span style="color: red;">(No hay profesionales disponibles en este horario)</span>';
+                    } else {
+                        label.innerHTML = 'Profesional *';
+                    }
+                }
+            }
         }
 
         function verCita(citaId) {
