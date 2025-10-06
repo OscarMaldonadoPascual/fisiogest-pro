@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="FisioGest Pro - Sistema de gestión para clínicas de fisioterapia">
-    <title>FisioGest Pro v2.0 - Sistema de Gestión</title>
+    <meta name="description" content="FisioGest Pro - Sistema completo de gestión para clínicas de fisioterapia">
+    <title>FisioGest Pro v3.0 - Sistema de Gestión Completo</title>
     
     <style>
         * {
@@ -215,8 +215,6 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            overflow-x: auto;
-            display: block;
         }
 
         table th {
@@ -231,11 +229,85 @@
         table td {
             padding: 12px;
             border-bottom: 1px solid #e0e0e0;
-            white-space: nowrap;
         }
 
         table tr:hover {
             background: #f7f7f7;
+        }
+
+        /* Calendar / Agenda */
+        .calendar-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: 100px repeat(7, 1fr);
+            gap: 1px;
+            background: #ddd;
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        .calendar-header {
+            background: #667eea;
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .time-slot {
+            background: white;
+            padding: 8px;
+            min-height: 60px;
+            cursor: pointer;
+            transition: background 0.2s;
+            position: relative;
+            font-size: 12px;
+        }
+
+        .time-slot:hover {
+            background: #f0f8ff;
+        }
+
+        .time-label {
+            background: #f7f7f7;
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .appointment {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 2px 0;
+            font-size: 11px;
+            cursor: pointer;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .appointment.confirmed {
+            background: #48bb78;
+        }
+
+        .appointment.pending {
+            background: #ed8936;
+        }
+
+        .appointment.completed {
+            background: #718096;
         }
 
         /* Modal */
@@ -373,6 +445,54 @@
             color: white;
         }
 
+        /* Factura */
+        .factura-preview {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            background: #f9f9f9;
+        }
+
+        .factura-header {
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        .factura-table {
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .factura-table th {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .factura-total {
+            text-align: right;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #667eea;
+        }
+
+        /* Horarios */
+        .horario-grid {
+            display: grid;
+            grid-template-columns: 100px repeat(2, 200px);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .horario-dia {
+            font-weight: bold;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .form-row {
@@ -397,12 +517,20 @@
                 padding: 15px;
             }
             
-            .header {
-                padding: 10px 15px;
+            .calendar-grid {
+                font-size: 10px;
+                grid-template-columns: 60px repeat(7, 1fr);
+            }
+        }
+
+        @media print {
+            .nav-tabs, .header, .btn, .modal {
+                display: none !important;
             }
             
-            .modal-content {
-                padding: 20px;
+            .factura-preview {
+                border: none;
+                box-shadow: none;
             }
         }
     </style>
@@ -432,7 +560,7 @@
     <!-- Login Screen -->
     <div class="login-container" id="loginScreen">
         <div class="login-box">
-            <h2>🏥 FisioGest Pro v2.0</h2>
+            <h2>🏥 FisioGest Pro v3.0</h2>
             
             <div id="loginError" class="alert alert-error" style="display: none;"></div>
             
@@ -461,7 +589,7 @@
     <!-- Main App -->
     <div class="app-container" id="mainApp">
         <div class="header">
-            <h1>🏥 FisioGest Pro</h1>
+            <h1>🏥 FisioGest Pro v3.0</h1>
             <div class="user-info">
                 <span id="userName">Usuario</span>
                 <span class="user-badge" id="userType">Tipo</span>
@@ -471,10 +599,12 @@
 
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="showSection('dashboard', event)">📊 Dashboard</button>
+            <button class="nav-tab" onclick="showSection('agenda', event)">📅 Agenda</button>
             <button class="nav-tab" onclick="showSection('pacientes', event)">👥 Pacientes</button>
             <button class="nav-tab" onclick="showSection('citas', event)">🕐 Citas</button>
-            <button class="nav-tab" onclick="showSection('actos', event)">💊 Actos</button>
-            <button class="nav-tab" onclick="showSection('usuarios', event)">👨‍⚕️ Usuarios</button>
+            <button class="nav-tab" onclick="showSection('facturas', event)">💰 Facturas</button>
+            <button class="nav-tab" onclick="showSection('actos', event)">💊 Tratamientos</button>
+            <button class="nav-tab" onclick="showSection('usuarios', event)">👨‍⚕️ Profesionales</button>
             <button class="nav-tab" onclick="showSection('config', event)">⚙️ Configuración</button>
         </div>
 
@@ -494,19 +624,20 @@
                             <div class="stat-label">Citas Hoy</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-value" id="statUsuarios">0</div>
-                            <div class="stat-label">Profesionales</div>
+                            <div class="stat-value" id="statFacturasMes">0€</div>
+                            <div class="stat-label">Facturado Mes</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-value" id="statActos">0</div>
-                            <div class="stat-label">Tratamientos</div>
+                            <div class="stat-value" id="statProfesionales">0</div>
+                            <div class="stat-label">Profesionales</div>
                         </div>
                     </div>
 
-                    <h3>Citas de Hoy</h3>
+                    <h3>Próximas Citas</h3>
                     <table>
                         <thead>
                             <tr>
+                                <th>Fecha</th>
                                 <th>Hora</th>
                                 <th>Paciente</th>
                                 <th>Profesional</th>
@@ -514,10 +645,40 @@
                                 <th>Estado</th>
                             </tr>
                         </thead>
-                        <tbody id="citasHoyTable">
-                            <tr><td colspan="5" style="text-align: center;">No hay citas para hoy</td></tr>
+                        <tbody id="proximasCitasTable">
+                            <tr><td colspan="6" style="text-align: center;">Cargando...</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Agenda -->
+            <div id="agenda" class="section">
+                <div class="card">
+                    <h2>Agenda Semanal</h2>
+                    
+                    <div class="calendar-controls">
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button class="btn btn-secondary" onclick="previousWeek()">← Anterior</button>
+                            <input type="date" id="weekSelector" class="form-control" style="width: 200px;">
+                            <button class="btn btn-secondary" onclick="nextWeek()">Siguiente →</button>
+                        </div>
+                        <div>
+                            <select id="profesionalFilter" class="form-control" style="width: 250px;">
+                                <option value="">Todos los profesionales</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="calendarGrid" class="calendar-grid">
+                        <!-- Se genera dinámicamente -->
+                    </div>
+                    
+                    <div class="alert alert-info" style="margin-top: 20px;">
+                        <strong>Leyenda:</strong> 
+                        🟢 Confirmada | 🟡 Pendiente | ⚫ Completada | 🔴 Cancelada
+                        <br>Haz click en un horario vacío para crear una cita
+                    </div>
                 </div>
             </div>
 
@@ -539,11 +700,12 @@
                                     <th>Nombre</th>
                                     <th>Teléfono</th>
                                     <th>Email</th>
+                                    <th>Última Visita</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="pacientesTable">
-                                <tr><td colspan="5" style="text-align: center;">Cargando...</td></tr>
+                                <tr><td colspan="6" style="text-align: center;">Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -558,6 +720,13 @@
                     <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                         <button class="btn btn-primary" onclick="nuevaCita()">➕ Nueva Cita</button>
                         <input type="date" id="filtroCitas" class="form-control" style="width: 200px;">
+                        <select id="filtroEstadoCita" class="form-control" style="width: 150px;">
+                            <option value="">Todos los estados</option>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="Confirmada">Confirmada</option>
+                            <option value="Completada">Completada</option>
+                            <option value="Cancelada">Cancelada</option>
+                        </select>
                         <button class="btn btn-success" onclick="loadCitas()">🔄 Actualizar</button>
                     </div>
 
@@ -583,7 +752,39 @@
                 </div>
             </div>
 
-            <!-- Actos -->
+            <!-- Facturas -->
+            <div id="facturas" class="section">
+                <div class="card">
+                    <h2>Gestión de Facturas</h2>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <button class="btn btn-primary" onclick="nuevaFactura()">➕ Nueva Factura</button>
+                        <input type="month" id="filtroMesFactura" class="form-control" style="width: 200px; display: inline-block;">
+                        <button class="btn btn-success" onclick="loadFacturas()">🔄 Actualizar</button>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Número</th>
+                                <th>Fecha</th>
+                                <th>Paciente</th>
+                                <th>Concepto</th>
+                                <th>Base</th>
+                                <th>IVA</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="facturasTable">
+                            <tr><td colspan="9" style="text-align: center;">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tratamientos -->
             <div id="actos" class="section">
                 <div class="card">
                     <h2>Gestión de Tratamientos</h2>
@@ -600,23 +801,24 @@
                                 <th>Descripción</th>
                                 <th>Duración</th>
                                 <th>Precio</th>
+                                <th>IVA</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="actosTable">
-                            <tr><td colspan="5" style="text-align: center;">Cargando...</td></tr>
+                            <tr><td colspan="6" style="text-align: center;">Cargando...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Usuarios -->
+            <!-- Profesionales -->
             <div id="usuarios" class="section">
                 <div class="card">
-                    <h2>Gestión de Usuarios</h2>
+                    <h2>Gestión de Profesionales</h2>
                     
                     <div style="margin-bottom: 20px;">
-                        <button class="btn btn-primary" onclick="nuevoUsuario()">➕ Nuevo Usuario</button>
+                        <button class="btn btn-primary" onclick="nuevoUsuario()">➕ Nuevo Profesional</button>
                         <button class="btn btn-success" onclick="loadUsuarios()">🔄 Actualizar</button>
                     </div>
 
@@ -628,12 +830,13 @@
                                     <th>Email</th>
                                     <th>Tipo</th>
                                     <th>Teléfono</th>
+                                    <th>Horario</th>
                                     <th>Estado</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="usuariosTable">
-                                <tr><td colspan="6" style="text-align: center;">Cargando...</td></tr>
+                                <tr><td colspan="7" style="text-align: center;">Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -653,9 +856,38 @@
                     <button class="btn btn-warning" onclick="testConnection()">🔧 Probar Conexión</button>
                     <button class="btn btn-danger" onclick="changeConnection()">🔄 Cambiar URL de Conexión</button>
                     
+                    <h3 style="margin-top: 30px;">Datos de la Clínica</h3>
+                    <form id="clinicaForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Nombre de la Clínica</label>
+                                <input type="text" class="form-control" id="clinicaNombre" value="FisioTur">
+                            </div>
+                            <div class="form-group">
+                                <label>CIF</label>
+                                <input type="text" class="form-control" id="clinicaCIF">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Dirección</label>
+                            <input type="text" class="form-control" id="clinicaDireccion">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Teléfono</label>
+                                <input type="tel" class="form-control" id="clinicaTelefono">
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" class="form-control" id="clinicaEmail">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Guardar Configuración</button>
+                    </form>
+                    
                     <h3 style="margin-top: 30px;">Información del Sistema</h3>
-                    <p>Versión: 2.0.1</p>
-                    <p>Última actualización: 2024</p>
+                    <p>Versión: 3.0.0</p>
+                    <p>Última actualización: Diciembre 2024</p>
                 </div>
             </div>
         </div>
@@ -680,11 +912,14 @@
         // =============================================
         let SCRIPT_URL = localStorage.getItem('fisiogest_script_url') || '';
         let currentUser = null;
+        let currentWeek = new Date();
         let dataCache = {
             pacientes: [],
             citas: [],
             usuarios: [],
-            actos: []
+            actos: [],
+            facturas: [],
+            horarios: []
         };
 
         // =============================================
@@ -700,8 +935,11 @@
                 checkSavedSession();
             }
             
-            // Configurar fecha actual
-            document.getElementById('filtroCitas').value = new Date().toISOString().split('T')[0];
+            // Configurar fechas actuales
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('filtroCitas').value = today;
+            document.getElementById('weekSelector').value = today;
+            document.getElementById('filtroMesFactura').value = today.substring(0, 7);
         });
 
         // Setup Form
@@ -774,6 +1012,7 @@
             document.getElementById('userName').textContent = currentUser.nombre;
             document.getElementById('userType').textContent = currentUser.tipo;
             loadDashboard();
+            loadProfesionalesFilter();
         }
 
         function checkSavedSession() {
@@ -847,10 +1086,7 @@
         // NAVEGACIÓN
         // =============================================
         function showSection(section, event) {
-            // Prevenir comportamiento por defecto si hay evento
-            if (event) {
-                event.preventDefault();
-            }
+            if (event) event.preventDefault();
             
             // Remover clases activas
             document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
@@ -865,8 +1101,10 @@
             // Cargar datos de la sección
             switch(section) {
                 case 'dashboard': loadDashboard(); break;
+                case 'agenda': loadAgenda(); break;
                 case 'pacientes': loadPacientes(); break;
                 case 'citas': loadCitas(); break;
+                case 'facturas': loadFacturas(); break;
                 case 'actos': loadActos(); break;
                 case 'usuarios': loadUsuarios(); break;
             }
@@ -877,28 +1115,42 @@
         // =============================================
         async function loadDashboard() {
             try {
-                const [pacientes, citas, usuarios, actos] = await Promise.all([
+                const [pacientes, citas, usuarios, facturas] = await Promise.all([
                     readSheet('Pacientes'),
                     readSheet('Citas'),
                     readSheet('Usuarios'),
-                    readSheet('Actos')
+                    readSheet('Facturas')
                 ]);
                 
                 // Actualizar estadísticas
                 document.getElementById('statPacientes').textContent = pacientes.length;
-                document.getElementById('statUsuarios').textContent = usuarios.filter(u => u[4] !== 'Administrativo').length;
-                document.getElementById('statActos').textContent = actos.length;
+                document.getElementById('statProfesionales').textContent = usuarios.filter(u => u[4] !== 'Administrativo').length;
                 
-                // Citas de hoy
+                // Citas de hoy y próximas
                 const hoy = new Date().toISOString().split('T')[0];
                 const citasHoy = citas.filter(c => c[1] === hoy);
                 document.getElementById('statCitasHoy').textContent = citasHoy.length;
                 
-                // Tabla de citas de hoy
-                const tbody = document.getElementById('citasHoyTable');
-                if (citasHoy.length > 0) {
-                    tbody.innerHTML = citasHoy.map(c => `
+                // Facturado del mes
+                const mes = new Date().toISOString().substring(0, 7);
+                const facturasMes = facturas.filter(f => f[2] && f[2].substring(0, 7) === mes);
+                const totalMes = facturasMes.reduce((sum, f) => sum + (parseFloat(f[8]) || 0), 0);
+                document.getElementById('statFacturasMes').textContent = totalMes.toFixed(2) + '€';
+                
+                // Tabla de próximas citas (hoy y mañana)
+                const mañana = new Date();
+                mañana.setDate(mañana.getDate() + 1);
+                const mañanaStr = mañana.toISOString().split('T')[0];
+                
+                const proximasCitas = citas.filter(c => 
+                    (c[1] === hoy || c[1] === mañanaStr) && c[9] !== 'Completada' && c[9] !== 'Cancelada'
+                ).sort((a, b) => (a[1] + a[2]).localeCompare(b[1] + b[2]));
+                
+                const tbody = document.getElementById('proximasCitasTable');
+                if (proximasCitas.length > 0) {
+                    tbody.innerHTML = proximasCitas.slice(0, 10).map(c => `
                         <tr>
+                            <td>${formatDate(c[1])}</td>
                             <td>${c[2] || ''}</td>
                             <td>${c[4] || ''}</td>
                             <td>${c[5] || ''}</td>
@@ -907,20 +1159,126 @@
                         </tr>
                     `).join('');
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay citas para hoy</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay citas próximas</td></tr>';
                 }
             } catch (error) {
                 console.error('Error cargando dashboard:', error);
             }
         }
 
-        function getStatusBadge(status) {
-            switch(status) {
-                case 'Completada': return 'success';
-                case 'Cancelada': return 'danger';
-                case 'Confirmada': return 'info';
-                default: return 'warning';
+        // =============================================
+        // AGENDA
+        // =============================================
+        async function loadAgenda() {
+            const citas = await readSheet('Citas');
+            const usuarios = await readSheet('Usuarios');
+            
+            dataCache.citas = citas;
+            dataCache.usuarios = usuarios;
+            
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            const weekStart = getWeekStart(currentWeek);
+            const profesionalFilter = document.getElementById('profesionalFilter').value;
+            
+            // Headers
+            let html = '<div class="calendar-header">Hora</div>';
+            const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            
+            for (let i = 0; i < 7; i++) {
+                const fecha = new Date(weekStart);
+                fecha.setDate(fecha.getDate() + i);
+                const fechaStr = fecha.toISOString().split('T')[0];
+                const isToday = fechaStr === new Date().toISOString().split('T')[0];
+                
+                html += `<div class="calendar-header" ${isToday ? 'style="background:#48bb78"' : ''}>
+                    ${dias[i]}<br>${fecha.getDate()}/${fecha.getMonth() + 1}
+                </div>`;
             }
+            
+            // Time slots
+            for (let hora = 8; hora < 21; hora++) {
+                for (let min = 0; min < 60; min += 30) {
+                    const timeStr = `${hora.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+                    html += `<div class="time-label">${timeStr}</div>`;
+                    
+                    for (let dia = 0; dia < 7; dia++) {
+                        const fecha = new Date(weekStart);
+                        fecha.setDate(fecha.getDate() + dia);
+                        const fechaStr = fecha.toISOString().split('T')[0];
+                        
+                        // Buscar citas para este slot
+                        const citasSlot = dataCache.citas.filter(c => 
+                            c[1] === fechaStr && 
+                            c[2] && c[2].substring(0, 5) === timeStr &&
+                            (!profesionalFilter || c[5] === profesionalFilter)
+                        );
+                        
+                        let slotContent = '';
+                        if (citasSlot.length > 0) {
+                            slotContent = citasSlot.map(c => {
+                                const statusIcon = c[9] === 'Confirmada' ? '🟢' : 
+                                                   c[9] === 'Completada' ? '⚫' :
+                                                   c[9] === 'Cancelada' ? '🔴' : '🟡';
+                                return `<div class="appointment ${c[9] ? c[9].toLowerCase() : 'pending'}" 
+                                        onclick="verCita('${c[0]}')">
+                                        ${statusIcon} ${c[4] ? c[4].split(' ')[0] : 'Sin nombre'}
+                                        <br>${c[5] ? c[5].split(' ')[0] : ''}
+                                    </div>`;
+                            }).join('');
+                        }
+                        
+                        html += `<div class="time-slot" onclick="nuevaCitaRapida('${fechaStr}', '${timeStr}')">
+                            ${slotContent}
+                        </div>`;
+                    }
+                }
+            }
+            
+            grid.innerHTML = html;
+        }
+
+        function getWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(d.setDate(diff));
+        }
+
+        function previousWeek() {
+            currentWeek.setDate(currentWeek.getDate() - 7);
+            document.getElementById('weekSelector').value = currentWeek.toISOString().split('T')[0];
+            renderCalendar();
+        }
+
+        function nextWeek() {
+            currentWeek.setDate(currentWeek.getDate() + 7);
+            document.getElementById('weekSelector').value = currentWeek.toISOString().split('T')[0];
+            renderCalendar();
+        }
+
+        document.getElementById('weekSelector').addEventListener('change', function() {
+            currentWeek = new Date(this.value);
+            renderCalendar();
+        });
+
+        document.getElementById('profesionalFilter').addEventListener('change', function() {
+            renderCalendar();
+        });
+
+        async function loadProfesionalesFilter() {
+            const usuarios = await readSheet('Usuarios');
+            const select = document.getElementById('profesionalFilter');
+            select.innerHTML = '<option value="">Todos los profesionales</option>' +
+                usuarios.filter(u => u[4] === 'Fisioterapeuta' || u[4] === 'Entrenador')
+                    .map(u => `<option value="${u[1]}">${u[1]}</option>`).join('');
+        }
+
+        function nuevaCitaRapida(fecha, hora) {
+            nuevaCita(fecha, hora);
         }
 
         // =============================================
@@ -938,79 +1296,101 @@
                         <td>${p[2] || ''} ${p[3] || ''}</td>
                         <td>${p[4] || ''}</td>
                         <td>${p[5] || ''}</td>
+                        <td>${p[10] || '-'}</td>
                         <td>
+                            <button class="btn btn-sm btn-info" onclick="editarPaciente('${p[0]}')">✏️</button>
+                            <button class="btn btn-sm btn-warning" onclick="verHistorial('${p[0]}')">📋</button>
                             <button class="btn btn-sm btn-danger" onclick="eliminarPaciente('${p[0]}')">🗑️</button>
                         </td>
                     </tr>
                 `).join('');
             } else {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay pacientes registrados</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay pacientes registrados</td></tr>';
             }
         }
 
-        function nuevoPaciente() {
+        function nuevoPaciente(pacienteId = null) {
+            const paciente = pacienteId ? dataCache.pacientes.find(p => p[0] === pacienteId) : null;
+            const isEdit = !!paciente;
+            
             const html = `
-                <form id="formPaciente" onsubmit="guardarPaciente(event)">
+                <form id="formPaciente" onsubmit="guardarPaciente(event, '${pacienteId || ''}')">
                     <div class="form-row">
                         <div class="form-group">
                             <label>DNI/NIE *</label>
-                            <input type="text" class="form-control" name="dni" required maxlength="15">
+                            <input type="text" class="form-control" name="dni" required maxlength="15" 
+                                   value="${paciente ? paciente[1] : ''}">
                         </div>
                         <div class="form-group">
                             <label>Fecha Nacimiento</label>
-                            <input type="date" class="form-control" name="fechaNac">
+                            <input type="date" class="form-control" name="fechaNac" 
+                                   value="${paciente ? paciente[6] : ''}">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label>Nombre *</label>
-                            <input type="text" class="form-control" name="nombre" required>
+                            <input type="text" class="form-control" name="nombre" required 
+                                   value="${paciente ? paciente[2] : ''}">
                         </div>
                         <div class="form-group">
                             <label>Apellidos *</label>
-                            <input type="text" class="form-control" name="apellidos" required>
+                            <input type="text" class="form-control" name="apellidos" required 
+                                   value="${paciente ? paciente[3] : ''}">
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label>Teléfono *</label>
-                            <input type="tel" class="form-control" name="telefono" required>
+                            <input type="tel" class="form-control" name="telefono" required 
+                                   value="${paciente ? paciente[4] : ''}">
                         </div>
                         <div class="form-group">
                             <label>Email</label>
-                            <input type="email" class="form-control" name="email">
+                            <input type="email" class="form-control" name="email" 
+                                   value="${paciente ? paciente[5] : ''}">
                         </div>
                     </div>
                     
                     <div class="form-group">
                         <label>Dirección</label>
-                        <input type="text" class="form-control" name="direccion">
+                        <input type="text" class="form-control" name="direccion" 
+                               value="${paciente ? paciente[7] : ''}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Alergias</label>
+                        <textarea class="form-control" name="alergias" rows="2">${paciente ? paciente[8] || '' : ''}</textarea>
                     </div>
                     
                     <div class="form-group">
                         <label>Observaciones</label>
-                        <textarea class="form-control" name="observaciones" rows="2"></textarea>
+                        <textarea class="form-control" name="observaciones" rows="2">${paciente ? paciente[9] || '' : ''}</textarea>
                     </div>
                     
                     <div style="text-align: right;">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar</button>
+                        <button type="submit" class="btn btn-primary">${isEdit ? 'Actualizar' : 'Guardar'}</button>
                     </div>
                 </form>
             `;
             
-            openModal('Nuevo Paciente', html);
+            openModal(isEdit ? 'Editar Paciente' : 'Nuevo Paciente', html);
         }
 
-        async function guardarPaciente(event) {
+        function editarPaciente(id) {
+            nuevoPaciente(id);
+        }
+
+        async function guardarPaciente(event, pacienteId) {
             event.preventDefault();
             const form = event.target;
             
             const valores = {
                 values: [
-                    'P' + Date.now(),
+                    pacienteId || 'P' + Date.now(),
                     form.dni.value,
                     form.nombre.value,
                     form.apellidos.value,
@@ -1018,20 +1398,66 @@
                     form.email.value || '',
                     form.fechaNac.value || '',
                     form.direccion.value || '',
-                    '',
+                    form.alergias.value || '',
                     form.observaciones.value || '',
                     new Date().toISOString().split('T')[0],
                     'Activo'
                 ]
             };
             
-            const success = await writeSheet('Pacientes', 'add', valores);
+            const action = pacienteId ? 'update' : 'add';
+            if (pacienteId) {
+                valores.id = pacienteId;
+            }
+            
+            const success = await writeSheet('Pacientes', action, valores);
             
             if (success) {
                 closeModal();
                 loadPacientes();
-                showNotification('Paciente guardado correctamente', 'success');
+                showNotification(pacienteId ? 'Paciente actualizado' : 'Paciente guardado', 'success');
             }
+        }
+
+        function verHistorial(pacienteId) {
+            const paciente = dataCache.pacientes.find(p => p[0] === pacienteId);
+            const citasPaciente = dataCache.citas.filter(c => c[3] === pacienteId);
+            
+            const html = `
+                <h4>Historial de ${paciente[2]} ${paciente[3]}</h4>
+                <p><strong>DNI:</strong> ${paciente[1]}</p>
+                <p><strong>Teléfono:</strong> ${paciente[4]}</p>
+                <p><strong>Email:</strong> ${paciente[5] || '-'}</p>
+                ${paciente[8] ? `<p><strong>Alergias:</strong> ${paciente[8]}</p>` : ''}
+                ${paciente[9] ? `<p><strong>Observaciones:</strong> ${paciente[9]}</p>` : ''}
+                
+                <h5 style="margin-top: 20px;">Últimas Citas:</h5>
+                <table style="width: 100%; font-size: 12px;">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Profesional</th>
+                            <th>Tratamiento</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${citasPaciente.length > 0 ? 
+                            citasPaciente.slice(-10).reverse().map(c => `
+                                <tr>
+                                    <td>${formatDate(c[1])}</td>
+                                    <td>${c[5] || ''}</td>
+                                    <td>${c[6] || ''}</td>
+                                    <td><span class="badge badge-${getStatusBadge(c[9])}">${c[9] || ''}</span></td>
+                                </tr>
+                            `).join('') : 
+                            '<tr><td colspan="4" style="text-align: center;">Sin citas registradas</td></tr>'
+                        }
+                    </tbody>
+                </table>
+            `;
+            
+            openModal('Historial del Paciente', html);
         }
 
         async function eliminarPaciente(id) {
@@ -1049,15 +1475,24 @@
         // =============================================
         async function loadCitas() {
             const citas = await readSheet('Citas');
-            const filtro = document.getElementById('filtroCitas').value;
+            const filtroFecha = document.getElementById('filtroCitas').value;
+            const filtroEstado = document.getElementById('filtroEstadoCita').value;
             
-            const citasFiltradas = filtro ? citas.filter(c => c[1] === filtro) : citas;
+            let citasFiltradas = citas;
+            
+            if (filtroFecha) {
+                citasFiltradas = citasFiltradas.filter(c => c[1] === filtroFecha);
+            }
+            
+            if (filtroEstado) {
+                citasFiltradas = citasFiltradas.filter(c => c[9] === filtroEstado);
+            }
             
             const tbody = document.getElementById('citasTable');
             if (citasFiltradas.length > 0) {
                 tbody.innerHTML = citasFiltradas.map(c => `
                     <tr>
-                        <td>${c[1] || ''}</td>
+                        <td>${formatDate(c[1])}</td>
                         <td>${c[2] || ''}</td>
                         <td>${c[4] || ''}</td>
                         <td>${c[5] || ''}</td>
@@ -1065,18 +1500,23 @@
                         <td>${c[8] || 0}€</td>
                         <td><span class="badge badge-${getStatusBadge(c[9])}">${c[9] || 'Pendiente'}</span></td>
                         <td>
-                            ${c[9] !== 'Completada' ? 
-                                `<button class="btn btn-sm btn-success" onclick="completarCita('${c[0]}')">✔</button>` : ''}
-                            <button class="btn btn-sm btn-danger" onclick="eliminarCita('${c[0]}')">🗑️</button>
+                            ${c[9] === 'Pendiente' ? 
+                                `<button class="btn btn-sm btn-success" onclick="confirmarCita('${c[0]}')">✓</button>` : ''}
+                            ${c[9] === 'Confirmada' ? 
+                                `<button class="btn btn-sm btn-info" onclick="completarCita('${c[0]}')">✔</button>` : ''}
+                            ${c[9] === 'Completada' ? 
+                                `<button class="btn btn-sm btn-warning" onclick="facturarCita('${c[0]}')">💰</button>` : ''}
+                            ${c[9] !== 'Cancelada' ? 
+                                `<button class="btn btn-sm btn-danger" onclick="cancelarCita('${c[0]}')">✖</button>` : ''}
                         </td>
                     </tr>
                 `).join('');
             } else {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No hay citas para la fecha seleccionada</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No hay citas para mostrar</td></tr>';
             }
         }
 
-        async function nuevaCita() {
+        async function nuevaCita(fecha = '', hora = '') {
             // Cargar datos necesarios
             await loadPacientes();
             const usuarios = await readSheet('Usuarios');
@@ -1088,11 +1528,11 @@
                         <div class="form-group">
                             <label>Fecha *</label>
                             <input type="date" class="form-control" name="fecha" required 
-                                   value="${new Date().toISOString().split('T')[0]}">
+                                   value="${fecha || new Date().toISOString().split('T')[0]}">
                         </div>
                         <div class="form-group">
                             <label>Hora *</label>
-                            <input type="time" class="form-control" name="hora" required value="10:00">
+                            <input type="time" class="form-control" name="hora" required value="${hora || '10:00'}">
                         </div>
                     </div>
                     
@@ -1121,7 +1561,7 @@
                             <option value="">Seleccionar...</option>
                             ${actos.map(a => `
                                 <option value="${a[0]}" data-duracion="${a[3]}" data-precio="${a[4]}" data-nombre="${a[1]}">
-                                    ${a[1]} - ${a[4]}€
+                                    ${a[1]} - ${a[4]}€ (${a[3]} min)
                                 </option>
                             `).join('')}
                         </select>
@@ -1138,6 +1578,11 @@
                         </div>
                     </div>
                     
+                    <div class="form-group">
+                        <label>Observaciones</label>
+                        <textarea class="form-control" name="observaciones" rows="2"></textarea>
+                    </div>
+                    
                     <div style="text-align: right;">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Guardar Cita</button>
@@ -1146,6 +1591,23 @@
             `;
             
             openModal('Nueva Cita', html);
+        }
+
+        function verCita(citaId) {
+            const cita = dataCache.citas.find(c => c[0] === citaId);
+            if (cita) {
+                const html = `
+                    <p><strong>Fecha:</strong> ${formatDate(cita[1])}</p>
+                    <p><strong>Hora:</strong> ${cita[2]}</p>
+                    <p><strong>Paciente:</strong> ${cita[4]}</p>
+                    <p><strong>Profesional:</strong> ${cita[5]}</p>
+                    <p><strong>Tratamiento:</strong> ${cita[6]}</p>
+                    <p><strong>Precio:</strong> ${cita[8]}€</p>
+                    <p><strong>Estado:</strong> <span class="badge badge-${getStatusBadge(cita[9])}">${cita[9]}</span></p>
+                    ${cita[10] ? `<p><strong>Observaciones:</strong> ${cita[10]}</p>` : ''}
+                `;
+                openModal('Detalles de la Cita', html);
+            }
         }
 
         function updatePrecioCita(select) {
@@ -1179,7 +1641,7 @@
                     form.duracion.value,
                     form.precio.value,
                     'Pendiente',
-                    '',
+                    form.observaciones.value || '',
                     new Date().toISOString()
                 ]
             };
@@ -1189,7 +1651,21 @@
             if (success) {
                 closeModal();
                 loadCitas();
+                loadAgenda();
                 showNotification('Cita guardada correctamente', 'success');
+            }
+        }
+
+        async function confirmarCita(id) {
+            const success = await writeSheet('Citas', 'update', { 
+                id: id, 
+                column: 10, 
+                value: 'Confirmada' 
+            });
+            
+            if (success) {
+                loadCitas();
+                showNotification('Cita confirmada', 'success');
             }
         }
 
@@ -1202,22 +1678,285 @@
             
             if (success) {
                 loadCitas();
-                showNotification('Cita marcada como completada', 'success');
+                showNotification('Cita completada', 'success');
             }
         }
 
-        async function eliminarCita(id) {
-            if (confirm('¿Estás seguro de eliminar esta cita?')) {
-                const success = await writeSheet('Citas', 'delete', { id: id });
+        async function cancelarCita(id) {
+            if (confirm('¿Estás seguro de cancelar esta cita?')) {
+                const success = await writeSheet('Citas', 'update', { 
+                    id: id, 
+                    column: 10, 
+                    value: 'Cancelada' 
+                });
+                
                 if (success) {
                     loadCitas();
-                    showNotification('Cita eliminada', 'success');
+                    loadAgenda();
+                    showNotification('Cita cancelada', 'success');
                 }
             }
         }
 
+        function facturarCita(citaId) {
+            const cita = dataCache.citas.find(c => c[0] === citaId);
+            if (cita) {
+                nuevaFacturaDesdeCita(cita);
+            }
+        }
+
         // =============================================
-        // ACTOS
+        // FACTURAS
+        // =============================================
+        async function loadFacturas() {
+            const facturas = await readSheet('Facturas');
+            dataCache.facturas = facturas;
+            
+            const filtroMes = document.getElementById('filtroMesFactura').value;
+            let facturasFiltradas = facturas;
+            
+            if (filtroMes) {
+                facturasFiltradas = facturas.filter(f => 
+                    f[2] && f[2].substring(0, 7) === filtroMes
+                );
+            }
+            
+            const tbody = document.getElementById('facturasTable');
+            if (facturasFiltradas.length > 0) {
+                tbody.innerHTML = facturasFiltradas.map(f => `
+                    <tr>
+                        <td>${f[1] || ''}</td>
+                        <td>${formatDate(f[2])}</td>
+                        <td>${f[4] || ''}</td>
+                        <td>${f[5] || ''}</td>
+                        <td>${f[6] || 0}€</td>
+                        <td>${f[7] || 0}€</td>
+                        <td><strong>${f[8] || 0}€</strong></td>
+                        <td><span class="badge badge-${f[9] === 'Pagada' ? 'success' : 'warning'}">${f[9] || 'Pendiente'}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="verFactura('${f[0]}')">👁️</button>
+                            <button class="btn btn-sm btn-success" onclick="imprimirFactura('${f[0]}')">🖨️</button>
+                            ${f[9] !== 'Pagada' ? 
+                                `<button class="btn btn-sm btn-warning" onclick="marcarPagada('${f[0]}')">💰</button>` : ''}
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center;">No hay facturas para mostrar</td></tr>';
+            }
+        }
+
+        async function nuevaFactura() {
+            await loadPacientes();
+            const actos = await readSheet('Actos');
+            
+            // Generar número de factura
+            const facturas = await readSheet('Facturas');
+            const year = new Date().getFullYear();
+            const lastNumber = facturas.filter(f => f[1] && f[1].startsWith(year + '/'))
+                .map(f => parseInt(f[1].split('/')[1]) || 0)
+                .reduce((max, n) => Math.max(max, n), 0);
+            const newNumber = `${year}/${(lastNumber + 1).toString().padStart(4, '0')}`;
+            
+            const html = `
+                <form id="formFactura" onsubmit="guardarFactura(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Número Factura</label>
+                            <input type="text" class="form-control" name="numero" value="${newNumber}" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha *</label>
+                            <input type="date" class="form-control" name="fecha" required 
+                                   value="${new Date().toISOString().split('T')[0]}">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Paciente *</label>
+                        <select class="form-control" name="pacienteId" required>
+                            <option value="">Seleccionar...</option>
+                            ${dataCache.pacientes.map(p => 
+                                `<option value="${p[0]}">${p[2]} ${p[3]} - ${p[1]}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Concepto *</label>
+                        <textarea class="form-control" name="concepto" required rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Base Imponible (€) *</label>
+                            <input type="number" step="0.01" class="form-control" name="base" required 
+                                   onchange="calcularTotal()">
+                        </div>
+                        <div class="form-group">
+                            <label>IVA (%)</label>
+                            <select class="form-control" name="iva" onchange="calcularTotal()">
+                                <option value="0">Exento (0%)</option>
+                                <option value="21">21%</option>
+                                <option value="10">10%</option>
+                                <option value="4">4%</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Total (€)</label>
+                        <input type="number" step="0.01" class="form-control" name="total" readonly>
+                    </div>
+                    
+                    <div style="text-align: right;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Crear Factura</button>
+                    </div>
+                </form>
+                
+                <script>
+                    function calcularTotal() {
+                        const form = document.getElementById('formFactura');
+                        const base = parseFloat(form.base.value) || 0;
+                        const ivaPct = parseFloat(form.iva.value) || 0;
+                        const iva = base * ivaPct / 100;
+                        form.total.value = (base + iva).toFixed(2);
+                    }
+                </script>
+            `;
+            
+            openModal('Nueva Factura', html);
+        }
+
+        function nuevaFacturaDesdeCita(cita) {
+            nuevaFactura();
+            setTimeout(() => {
+                const form = document.getElementById('formFactura');
+                if (form) {
+                    form.pacienteId.value = cita[3];
+                    form.concepto.value = `Tratamiento: ${cita[6]}\nFecha: ${formatDate(cita[1])}\nProfesional: ${cita[5]}`;
+                    form.base.value = cita[8];
+                    form.iva.value = '21';
+                    calcularTotal();
+                }
+            }, 100);
+        }
+
+        async function guardarFactura(event) {
+            event.preventDefault();
+            const form = event.target;
+            
+            const paciente = dataCache.pacientes.find(p => p[0] === form.pacienteId.value);
+            
+            const base = parseFloat(form.base.value) || 0;
+            const ivaPct = parseFloat(form.iva.value) || 0;
+            const iva = base * ivaPct / 100;
+            const total = base + iva;
+            
+            const valores = {
+                values: [
+                    'F' + Date.now(),
+                    form.numero.value,
+                    form.fecha.value,
+                    form.pacienteId.value,
+                    paciente ? `${paciente[2]} ${paciente[3]}` : '',
+                    form.concepto.value,
+                    base.toFixed(2),
+                    iva.toFixed(2),
+                    total.toFixed(2),
+                    'Pendiente',
+                    '',
+                    ''
+                ]
+            };
+            
+            const success = await writeSheet('Facturas', 'add', valores);
+            
+            if (success) {
+                closeModal();
+                loadFacturas();
+                showNotification('Factura creada correctamente', 'success');
+            }
+        }
+
+        function verFactura(facturaId) {
+            const factura = dataCache.facturas.find(f => f[0] === facturaId);
+            if (factura) {
+                const html = `
+                    <div class="factura-preview">
+                        <div class="factura-header">
+                            <h3>FACTURA ${factura[1]}</h3>
+                            <p>Fecha: ${formatDate(factura[2])}</p>
+                        </div>
+                        
+                        <div style="margin: 20px 0;">
+                            <h4>Cliente</h4>
+                            <p>${factura[4]}</p>
+                        </div>
+                        
+                        <table class="factura-table">
+                            <thead>
+                                <tr>
+                                    <th>Concepto</th>
+                                    <th style="text-align: right;">Importe</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>${factura[5]}</td>
+                                    <td style="text-align: right;">${factura[6]}€</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div style="text-align: right; margin-top: 20px;">
+                            <p>Base Imponible: ${factura[6]}€</p>
+                            <p>IVA: ${factura[7]}€</p>
+                            <div class="factura-total">
+                                TOTAL: ${factura[8]}€
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 30px;">
+                            <p><strong>Estado:</strong> 
+                                <span class="badge badge-${factura[9] === 'Pagada' ? 'success' : 'warning'}">
+                                    ${factura[9]}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                `;
+                openModal('Factura', html);
+            }
+        }
+
+        function imprimirFactura(facturaId) {
+            verFactura(facturaId);
+            setTimeout(() => window.print(), 500);
+        }
+
+        async function marcarPagada(facturaId) {
+            const success = await writeSheet('Facturas', 'update', { 
+                id: facturaId, 
+                column: 10, 
+                value: 'Pagada' 
+            });
+            
+            if (success) {
+                const success2 = await writeSheet('Facturas', 'update', { 
+                    id: facturaId, 
+                    column: 11, 
+                    value: new Date().toISOString().split('T')[0]
+                });
+                
+                loadFacturas();
+                showNotification('Factura marcada como pagada', 'success');
+            }
+        }
+
+        // =============================================
+        // TRATAMIENTOS
         // =============================================
         async function loadActos() {
             const actos = await readSheet('Actos');
@@ -1231,79 +1970,106 @@
                         <td>${a[2] || ''}</td>
                         <td>${a[3] || 0} min</td>
                         <td>${a[4] || 0}€</td>
+                        <td>${a[7] || '21'}%</td>
                         <td>
+                            <button class="btn btn-sm btn-info" onclick="editarActo('${a[0]}')">✏️</button>
                             <button class="btn btn-sm btn-danger" onclick="eliminarActo('${a[0]}')">🗑️</button>
                         </td>
                     </tr>
                 `).join('');
             } else {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay tratamientos registrados</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay tratamientos registrados</td></tr>';
             }
         }
 
-        function nuevoActo() {
+        function nuevoActo(actoId = null) {
+            const acto = actoId ? dataCache.actos.find(a => a[0] === actoId) : null;
+            const isEdit = !!acto;
+            
             const html = `
-                <form id="formActo" onsubmit="guardarActo(event)">
+                <form id="formActo" onsubmit="guardarActo(event, '${actoId || ''}')">
                     <div class="form-group">
                         <label>Nombre del Tratamiento *</label>
-                        <input type="text" class="form-control" name="nombre" required>
+                        <input type="text" class="form-control" name="nombre" required 
+                               value="${acto ? acto[1] : ''}">
                     </div>
                     
                     <div class="form-group">
                         <label>Descripción</label>
-                        <textarea class="form-control" name="descripcion" rows="3"></textarea>
+                        <textarea class="form-control" name="descripcion" rows="3">${acto ? acto[2] || '' : ''}</textarea>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label>Duración (minutos) *</label>
                             <select class="form-control" name="duracion" required>
-                                <option value="15">15 min</option>
-                                <option value="30">30 min</option>
-                                <option value="45" selected>45 min</option>
-                                <option value="60">60 min</option>
-                                <option value="90">90 min</option>
-                                <option value="120">120 min</option>
+                                <option value="15" ${acto && acto[3] == 15 ? 'selected' : ''}>15 min</option>
+                                <option value="30" ${acto && acto[3] == 30 ? 'selected' : ''}>30 min</option>
+                                <option value="45" ${acto && acto[3] == 45 ? 'selected' : ''}>45 min</option>
+                                <option value="60" ${acto && acto[3] == 60 ? 'selected' : ''}>60 min</option>
+                                <option value="90" ${acto && acto[3] == 90 ? 'selected' : ''}>90 min</option>
+                                <option value="120" ${acto && acto[3] == 120 ? 'selected' : ''}>120 min</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Precio (€) *</label>
-                            <input type="number" step="0.01" min="0" class="form-control" name="precio" required>
+                            <input type="number" step="0.01" min="0" class="form-control" name="precio" required 
+                                   value="${acto ? acto[4] : ''}">
                         </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>IVA (%)</label>
+                        <select class="form-control" name="iva">
+                            <option value="0" ${acto && acto[7] == 0 ? 'selected' : ''}>Exento (0%)</option>
+                            <option value="21" ${!acto || acto[7] == 21 ? 'selected' : ''}>21%</option>
+                            <option value="10" ${acto && acto[7] == 10 ? 'selected' : ''}>10%</option>
+                            <option value="4" ${acto && acto[7] == 4 ? 'selected' : ''}>4%</option>
+                        </select>
                     </div>
                     
                     <div style="text-align: right;">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar</button>
+                        <button type="submit" class="btn btn-primary">${isEdit ? 'Actualizar' : 'Guardar'}</button>
                     </div>
                 </form>
             `;
             
-            openModal('Nuevo Tratamiento', html);
+            openModal(isEdit ? 'Editar Tratamiento' : 'Nuevo Tratamiento', html);
         }
 
-        async function guardarActo(event) {
+        function editarActo(id) {
+            nuevoActo(id);
+        }
+
+        async function guardarActo(event, actoId) {
             event.preventDefault();
             const form = event.target;
             
             const valores = {
                 values: [
-                    'A' + Date.now(),
+                    actoId || 'A' + Date.now(),
                     form.nombre.value,
                     form.descripcion.value || '',
                     form.duracion.value,
                     form.precio.value,
                     '#667eea',
-                    'Activo'
+                    'Activo',
+                    form.iva.value
                 ]
             };
             
-            const success = await writeSheet('Actos', 'add', valores);
+            const action = actoId ? 'update' : 'add';
+            if (actoId) {
+                valores.id = actoId;
+            }
+            
+            const success = await writeSheet('Actos', action, valores);
             
             if (success) {
                 closeModal();
                 loadActos();
-                showNotification('Tratamiento guardado correctamente', 'success');
+                showNotification(actoId ? 'Tratamiento actualizado' : 'Tratamiento guardado', 'success');
             }
         }
 
@@ -1318,47 +2084,62 @@
         }
 
         // =============================================
-        // USUARIOS
+        // PROFESIONALES
         // =============================================
         async function loadUsuarios() {
             const usuarios = await readSheet('Usuarios');
+            const horarios = await readSheet('Horarios');
             dataCache.usuarios = usuarios;
+            dataCache.horarios = horarios;
             
             const tbody = document.getElementById('usuariosTable');
             if (usuarios.length > 0) {
-                tbody.innerHTML = usuarios.map(u => `
-                    <tr>
-                        <td>${u[1] || ''}</td>
-                        <td>${u[2] || ''}</td>
-                        <td>${u[4] || ''}</td>
-                        <td>${u[6] || ''}</td>
-                        <td><span class="badge badge-${u[8] === 'Activo' ? 'success' : 'danger'}">${u[8] || 'Activo'}</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-danger" onclick="eliminarUsuario('${u[0]}')">🗑️</button>
-                        </td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = usuarios.map(u => {
+                    const horario = horarios.find(h => h[0] === u[0]);
+                    return `
+                        <tr>
+                            <td>${u[1] || ''}</td>
+                            <td>${u[2] || ''}</td>
+                            <td>${u[4] || ''}</td>
+                            <td>${u[6] || ''}</td>
+                            <td>${horario ? 'Configurado' : 'Sin configurar'}</td>
+                            <td><span class="badge badge-${u[8] === 'Activo' ? 'success' : 'danger'}">${u[8] || 'Activo'}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="editarUsuario('${u[0]}')">✏️</button>
+                                <button class="btn btn-sm btn-warning" onclick="configurarHorario('${u[0]}')">📅</button>
+                                <button class="btn btn-sm btn-danger" onclick="eliminarUsuario('${u[0]}')">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             } else {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay usuarios registrados</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay profesionales registrados</td></tr>';
             }
         }
 
-        function nuevoUsuario() {
+        function nuevoUsuario(usuarioId = null) {
+            const usuario = usuarioId ? dataCache.usuarios.find(u => u[0] === usuarioId) : null;
+            const isEdit = !!usuario;
+            
             const html = `
-                <form id="formUsuario" onsubmit="guardarUsuario(event)">
+                <form id="formUsuario" onsubmit="guardarUsuario(event, '${usuarioId || ''}')">
                     <div class="form-group">
                         <label>Nombre Completo *</label>
-                        <input type="text" class="form-control" name="nombre" required>
+                        <input type="text" class="form-control" name="nombre" required 
+                               value="${usuario ? usuario[1] : ''}">
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label>Email *</label>
-                            <input type="email" class="form-control" name="email" required>
+                            <input type="email" class="form-control" name="email" required 
+                                   value="${usuario ? usuario[2] : ''}">
                         </div>
                         <div class="form-group">
-                            <label>Contraseña *</label>
-                            <input type="password" class="form-control" name="password" required minlength="6">
+                            <label>Contraseña ${isEdit ? '' : '*'}</label>
+                            <input type="password" class="form-control" name="password" 
+                                   ${isEdit ? '' : 'required'} minlength="6"
+                                   placeholder="${isEdit ? 'Dejar en blanco para no cambiar' : ''}">
                         </div>
                     </div>
                     
@@ -1366,66 +2147,156 @@
                         <div class="form-group">
                             <label>Tipo *</label>
                             <select class="form-control" name="tipo" required>
-                                <option value="Fisioterapeuta">Fisioterapeuta</option>
-                                <option value="Entrenador">Entrenador</option>
-                                <option value="Administrativo">Administrativo</option>
+                                <option value="Fisioterapeuta" ${usuario && usuario[4] === 'Fisioterapeuta' ? 'selected' : ''}>Fisioterapeuta</option>
+                                <option value="Entrenador" ${usuario && usuario[4] === 'Entrenador' ? 'selected' : ''}>Entrenador</option>
+                                <option value="Administrativo" ${usuario && usuario[4] === 'Administrativo' ? 'selected' : ''}>Administrativo</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Teléfono</label>
-                            <input type="tel" class="form-control" name="telefono">
+                            <input type="tel" class="form-control" name="telefono" 
+                                   value="${usuario ? usuario[6] || '' : ''}">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Especialidad</label>
+                            <input type="text" class="form-control" name="especialidad" 
+                                   value="${usuario ? usuario[5] || '' : ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Nº Colegiado</label>
+                            <input type="text" class="form-control" name="colegiado" 
+                                   value="${usuario ? usuario[7] || '' : ''}">
                         </div>
                     </div>
                     
                     <div style="text-align: right;">
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar</button>
+                        <button type="submit" class="btn btn-primary">${isEdit ? 'Actualizar' : 'Guardar'}</button>
                     </div>
                 </form>
             `;
             
-            openModal('Nuevo Usuario', html);
+            openModal(isEdit ? 'Editar Profesional' : 'Nuevo Profesional', html);
         }
 
-        async function guardarUsuario(event) {
+        function editarUsuario(id) {
+            nuevoUsuario(id);
+        }
+
+        function configurarHorario(usuarioId) {
+            const usuario = dataCache.usuarios.find(u => u[0] === usuarioId);
+            const horario = dataCache.horarios.find(h => h[0] === usuarioId);
+            
+            const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            
+            const html = `
+                <h4>Horario de ${usuario[1]}</h4>
+                <form id="formHorario" onsubmit="guardarHorario(event, '${usuarioId}')">
+                    <div class="horario-grid">
+                        <div></div>
+                        <div style="text-align: center;"><strong>Mañana</strong></div>
+                        <div style="text-align: center;"><strong>Tarde</strong></div>
+                        
+                        ${dias.map((dia, i) => {
+                            const diaData = horario ? horario[i + 1] : '09:00-14:00,16:00-20:00';
+                            const [manana, tarde] = diaData ? diaData.split(',') : ['', ''];
+                            return `
+                                <div class="horario-dia">${dia}</div>
+                                <input type="text" class="form-control" name="manana${i}" 
+                                       placeholder="09:00-14:00" value="${manana || ''}">
+                                <input type="text" class="form-control" name="tarde${i}" 
+                                       placeholder="16:00-20:00" value="${tarde || ''}">
+                            `;
+                        }).join('')}
+                    </div>
+                    
+                    <div style="text-align: right; margin-top: 20px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Horario</button>
+                    </div>
+                </form>
+            `;
+            
+            openModal('Configurar Horario', html);
+        }
+
+        async function guardarHorario(event, usuarioId) {
+            event.preventDefault();
+            const form = event.target;
+            
+            const valores = {
+                values: [usuarioId]
+            };
+            
+            for (let i = 0; i < 7; i++) {
+                const manana = form[`manana${i}`].value;
+                const tarde = form[`tarde${i}`].value;
+                valores.values.push(`${manana},${tarde}`);
+            }
+            
+            const horarioExiste = dataCache.horarios.find(h => h[0] === usuarioId);
+            const action = horarioExiste ? 'update' : 'add';
+            if (horarioExiste) {
+                valores.id = usuarioId;
+            }
+            
+            const success = await writeSheet('Horarios', action, valores);
+            
+            if (success) {
+                closeModal();
+                loadUsuarios();
+                showNotification('Horario guardado', 'success');
+            }
+        }
+
+        async function guardarUsuario(event, usuarioId) {
             event.preventDefault();
             const form = event.target;
             
             const valores = {
                 values: [
-                    'U' + Date.now(),
+                    usuarioId || 'U' + Date.now(),
                     form.nombre.value,
                     form.email.value,
-                    form.password.value,
+                    usuarioId && !form.password.value ? 
+                        dataCache.usuarios.find(u => u[0] === usuarioId)[3] : 
+                        form.password.value,
                     form.tipo.value,
-                    '',
+                    form.especialidad.value || '',
                     form.telefono.value || '',
-                    '',
+                    form.colegiado.value || '',
                     'Activo'
                 ]
             };
             
-            const success = await writeSheet('Usuarios', 'add', valores);
+            const action = usuarioId ? 'update' : 'add';
+            if (usuarioId) {
+                valores.id = usuarioId;
+            }
+            
+            const success = await writeSheet('Usuarios', action, valores);
             
             if (success) {
                 closeModal();
                 loadUsuarios();
-                showNotification('Usuario creado correctamente', 'success');
+                showNotification(usuarioId ? 'Profesional actualizado' : 'Profesional creado', 'success');
             }
         }
 
         async function eliminarUsuario(id) {
-            // No permitir eliminar el admin principal
-            if (id === 'U001') {
-                showNotification('No se puede eliminar el usuario administrador principal', 'error');
+            if (id === 'U001' || id === currentUser.id) {
+                showNotification('No se puede eliminar este usuario', 'error');
                 return;
             }
             
-            if (confirm('¿Estás seguro de eliminar este usuario?')) {
+            if (confirm('¿Estás seguro de eliminar este profesional?')) {
                 const success = await writeSheet('Usuarios', 'delete', { id: id });
                 if (success) {
                     loadUsuarios();
-                    showNotification('Usuario eliminado', 'success');
+                    showNotification('Profesional eliminado', 'success');
                 }
             }
         }
@@ -1452,6 +2323,23 @@
             setTimeout(() => div.remove(), 3000);
         }
 
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        function getStatusBadge(status) {
+            switch(status) {
+                case 'Completada': return 'success';
+                case 'Cancelada': return 'danger';
+                case 'Confirmada': return 'info';
+                case 'Pagada': return 'success';
+                default: return 'warning';
+            }
+        }
+
         async function testConnection() {
             try {
                 const response = await fetch(SCRIPT_URL + '?action=test');
@@ -1476,6 +2364,33 @@
                 localStorage.removeItem('currentUser');
                 location.reload();
             }
+        }
+
+        // Guardar configuración de la clínica
+        document.getElementById('clinicaForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const config = {
+                nombre: document.getElementById('clinicaNombre').value,
+                cif: document.getElementById('clinicaCIF').value,
+                direccion: document.getElementById('clinicaDireccion').value,
+                telefono: document.getElementById('clinicaTelefono').value,
+                email: document.getElementById('clinicaEmail').value
+            };
+            
+            localStorage.setItem('clinicaConfig', JSON.stringify(config));
+            showNotification('Configuración guardada', 'success');
+        });
+
+        // Cargar configuración guardada
+        const clinicaConfig = localStorage.getItem('clinicaConfig');
+        if (clinicaConfig) {
+            const config = JSON.parse(clinicaConfig);
+            document.getElementById('clinicaNombre').value = config.nombre || '';
+            document.getElementById('clinicaCIF').value = config.cif || '';
+            document.getElementById('clinicaDireccion').value = config.direccion || '';
+            document.getElementById('clinicaTelefono').value = config.telefono || '';
+            document.getElementById('clinicaEmail').value = config.email || '';
         }
     </script>
 </body>
