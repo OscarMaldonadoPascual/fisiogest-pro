@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="FisioGest Pro - Sistema completo de gestión para clínicas de fisioterapia">
-    <title>FisioGest Pro v3.0 - Sistema de Gestión Completo</title>
+    <title>FisioGest Pro v3.0 - Sistema de Gestión</title>
     
     <style>
         * {
@@ -886,7 +886,7 @@
                     </form>
                     
                     <h3 style="margin-top: 30px;">Información del Sistema</h3>
-                    <p>Versión: 3.0.0</p>
+                    <p>Versión: 3.0.1</p>
                     <p>Última actualización: Diciembre 2024</p>
                 </div>
             </div>
@@ -940,6 +940,17 @@
             document.getElementById('filtroCitas').value = today;
             document.getElementById('weekSelector').value = today;
             document.getElementById('filtroMesFactura').value = today.substring(0, 7);
+            
+            // Cargar configuración guardada de la clínica
+            const clinicaConfig = localStorage.getItem('clinicaConfig');
+            if (clinicaConfig) {
+                const config = JSON.parse(clinicaConfig);
+                document.getElementById('clinicaNombre').value = config.nombre || '';
+                document.getElementById('clinicaCIF').value = config.cif || '';
+                document.getElementById('clinicaDireccion').value = config.direccion || '';
+                document.getElementById('clinicaTelefono').value = config.telefono || '';
+                document.getElementById('clinicaEmail').value = config.email || '';
+            }
         });
 
         // Setup Form
@@ -1421,7 +1432,7 @@
 
         function verHistorial(pacienteId) {
             const paciente = dataCache.pacientes.find(p => p[0] === pacienteId);
-            const citasPaciente = dataCache.citas.filter(c => c[3] === pacienteId);
+            const citasPaciente = dataCache.citas ? dataCache.citas.filter(c => c[3] === pacienteId) : [];
             
             const html = `
                 <h4>Historial de ${paciente[2]} ${paciente[3]}</h4>
@@ -1475,6 +1486,7 @@
         // =============================================
         async function loadCitas() {
             const citas = await readSheet('Citas');
+            dataCache.citas = citas;
             const filtroFecha = document.getElementById('filtroCitas').value;
             const filtroEstado = document.getElementById('filtroEstadoCita').value;
             
@@ -1708,6 +1720,18 @@
         // =============================================
         // FACTURAS
         // =============================================
+        
+        // Función para calcular total de factura - DEBE ESTAR FUERA
+        function calcularTotal() {
+            const form = document.getElementById('formFactura');
+            if (form) {
+                const base = parseFloat(form.base.value) || 0;
+                const ivaPct = parseFloat(form.iva.value) || 0;
+                const iva = base * ivaPct / 100;
+                form.total.value = (base + iva).toFixed(2);
+            }
+        }
+        
         async function loadFacturas() {
             const facturas = await readSheet('Facturas');
             dataCache.facturas = facturas;
@@ -1748,7 +1772,6 @@
 
         async function nuevaFactura() {
             await loadPacientes();
-            const actos = await readSheet('Actos');
             
             // Generar número de factura
             const facturas = await readSheet('Facturas');
@@ -1814,16 +1837,6 @@
                         <button type="submit" class="btn btn-primary">Crear Factura</button>
                     </div>
                 </form>
-                
-                <script>
-                    function calcularTotal() {
-                        const form = document.getElementById('formFactura');
-                        const base = parseFloat(form.base.value) || 0;
-                        const ivaPct = parseFloat(form.iva.value) || 0;
-                        const iva = base * ivaPct / 100;
-                        form.total.value = (base + iva).toFixed(2);
-                    }
-                </script>
             `;
             
             openModal('Nueva Factura', html);
@@ -1944,7 +1957,7 @@
             });
             
             if (success) {
-                const success2 = await writeSheet('Facturas', 'update', { 
+                await writeSheet('Facturas', 'update', { 
                     id: facturaId, 
                     column: 11, 
                     value: new Date().toISOString().split('T')[0]
@@ -2201,7 +2214,7 @@
                         <div style="text-align: center;"><strong>Tarde</strong></div>
                         
                         ${dias.map((dia, i) => {
-                            const diaData = horario ? horario[i + 1] : '09:00-14:00,16:00-20:00';
+                            const diaData = horario && horario[i + 1] ? horario[i + 1] : '09:00-14:00,16:00-20:00';
                             const [manana, tarde] = diaData ? diaData.split(',') : ['', ''];
                             return `
                                 <div class="horario-dia">${dia}</div>
@@ -2381,17 +2394,6 @@
             localStorage.setItem('clinicaConfig', JSON.stringify(config));
             showNotification('Configuración guardada', 'success');
         });
-
-        // Cargar configuración guardada
-        const clinicaConfig = localStorage.getItem('clinicaConfig');
-        if (clinicaConfig) {
-            const config = JSON.parse(clinicaConfig);
-            document.getElementById('clinicaNombre').value = config.nombre || '';
-            document.getElementById('clinicaCIF').value = config.cif || '';
-            document.getElementById('clinicaDireccion').value = config.direccion || '';
-            document.getElementById('clinicaTelefono').value = config.telefono || '';
-            document.getElementById('clinicaEmail').value = config.email || '';
-        }
     </script>
 </body>
 </html>
